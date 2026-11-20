@@ -1,0 +1,43 @@
+(() => {
+"use strict";
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),$=id=>document.getElementById(id);
+const W=canvas.width,H=canvas.height,COLORS=["#43e8ff","#4d9dff","#a875ff","#ff5db1","#ff9a55"];
+const paddle={x:W/2-65,y:H-45,w:130,h:12,speed:8},ball={x:W/2,y:H-65,r:8,vx:4.1,vy:-4.7,speed:6.2},keys={left:false,right:false};
+let bricks=[],score=0,lives=3,level=1,running=false,launched=false,gameOver=false,best=Number(localStorage.getItem("breakgame-best")||0),soundOn=true,audio=null,raf=0,last=0;
+const rows=5,cols=10,bw=71,bh=20,gap=10,startX=(W-(cols*bw+(cols-1)*gap))/2,startY=65;
+const fmt=n=>String(n).padStart(6,"0");
+$("best").textContent=fmt(best);
+function hud(){$("score").textContent=fmt(score);$("best").textContent=fmt(best);$("level").textContent=String(level).padStart(2,"0");$("lives").textContent=lives>0?Array.from({length:lives},()=>"♥").join(" "):"—";$("lives").setAttribute("aria-label",lives+" lives")}
+function makeBricks(){bricks=[];for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)bricks.push({x:startX+c*(bw+gap),y:startY+r*(bh+gap),w:bw,h:bh,hp:1+(r===0&&level>1?1:0),color:COLORS[r]})}
+function resetBall(){ball.x=paddle.x+paddle.w/2;ball.y=paddle.y-ball.r-2;ball.speed=Math.min(8.2,6.2+(level-1)*.35);const d=Math.random()>.5?1:-1;ball.vx=d*ball.speed*.66;ball.vy=-Math.sqrt(ball.speed*ball.speed-ball.vx*ball.vx);launched=false}
+function overlay(eyebrow,title,text,button,icon="◆"){ $("overlayEyebrow").textContent=eyebrow;$("overlayTitle").textContent=title;$("overlayText").textContent=text;$("mainButton").innerHTML=button+' <span>→</span>';$("overlayIcon").textContent=icon;$("overlay").classList.remove("hidden")}
+function hide(){ $("overlay").classList.add("hidden") }
+function start(){cancelAnimationFrame(raf);score=0;lives=3;level=1;gameOver=false;running=true;paddle.w=130;paddle.x=W/2-paddle.w/2;makeBricks();resetBall();hud();hide();draw();last=performance.now();raf=requestAnimationFrame(loop);$("mainButton").onclick=buttonAction}
+function launch(){if(!running||launched)return;launched=true;tone(520,.055)}
+function resume(){running=true;hide();last=performance.now();raf=requestAnimationFrame(loop);$("mainButton").onclick=buttonAction}
+function pause(){if(!running||gameOver)return;running=false;cancelAnimationFrame(raf);overlay("GAME PAUSED","TAKE A BREATHER","Your game is waiting right where you left it.","RESUME","Ⅱ");$("mainButton").onclick=resume}
+function buttonAction(){if(!running&&$("overlayTitle").textContent==="TAKE A BREATHER")resume();else start()}
+function tone(freq,duration){if(!soundOn)return;try{audio ||= new(window.AudioContext||window.webkitAudioContext)();if(audio.state==="suspended")audio.resume();const o=audio.createOscillator(),g=audio.createGain();o.type="sine";o.frequency.value=freq;g.gain.setValueAtTime(.035,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+duration)}catch(_){}}
+function addScore(n){score+=n;if(score>best){best=score;localStorage.setItem("breakgame-best",String(best))}hud()}
+function loseLife(){lives--;tone(130,.25);hud();if(lives<=0){running=false;gameOver=true;overlay("GAME OVER","NICE TRY!","You scored "+fmt(score)+". Best score: "+fmt(best)+".","PLAY AGAIN","✦");$("mainButton").onclick=start}else{paddle.x=W/2-paddle.w/2;resetBall();running=false;overlay("OOPS!","ONE MORE TRY","You have "+lives+" "+(lives===1?"life":"lives")+" left. Keep going!","CONTINUE","♥");$("mainButton").onclick=()=>{hide();running=true;last=performance.now();raf=requestAnimationFrame(loop)}}}
+function nextLevel(){level++;makeBricks();paddle.w=Math.max(88,130-(level-1)*5);paddle.x=W/2-paddle.w/2;resetBall();hud();running=false;overlay("LEVEL COMPLETE","LEVEL "+String(level-1).padStart(2,"0")+" CLEAR","The next wave is faster. Ready?","NEXT LEVEL","★");$("mainButton").onclick=()=>{hide();running=true;last=performance.now();raf=requestAnimationFrame(loop)}}
+function update(dt){const step=Math.min(dt/16.667,2);if(keys.left)paddle.x-=paddle.speed*step;if(keys.right)paddle.x+=paddle.speed*step;paddle.x=Math.max(14,Math.min(W-paddle.w-14,paddle.x));if(!launched){ball.x=paddle.x+paddle.w/2;ball.y=paddle.y-ball.r-2;return}ball.x+=ball.vx*step;ball.y+=ball.vy*step;
+if(ball.x-ball.r<0){ball.x=ball.r;ball.vx=Math.abs(ball.vx);tone(280,.025)}if(ball.x+ball.r>W){ball.x=W-ball.r;ball.vx=-Math.abs(ball.vx);tone(280,.025)}if(ball.y-ball.r<0){ball.y=ball.r;ball.vy=Math.abs(ball.vy);tone(300,.025)}if(ball.y-ball.r>H){loseLife();return}
+if(ball.vy>0&&ball.y+ball.r>=paddle.y&&ball.y-ball.r<=paddle.y+paddle.h&&ball.x>=paddle.x-2&&ball.x<=paddle.x+paddle.w+2){const hit=(ball.x-(paddle.x+paddle.w/2))/(paddle.w/2),angle=hit*(Math.PI/3),speed=Math.min(9,Math.hypot(ball.vx,ball.vy)+.025);ball.vx=Math.sin(angle)*speed;ball.vy=-Math.cos(angle)*speed;ball.y=paddle.y-ball.r-1;tone(420,.04)}
+for(const b of bricks){if(b.hp<=0)continue;if(ball.x+ball.r>b.x&&ball.x-ball.r<b.x+b.w&&ball.y+ball.r>b.y&&ball.y-ball.r<b.y+b.h){const ox=Math.min(ball.x+ball.r-b.x,b.x+b.w-(ball.x-ball.r)),oy=Math.min(ball.y+ball.r-b.y,b.y+b.h-(ball.y-ball.r));if(ox<oy)ball.vx*=-1;else ball.vy*=-1;b.hp--;addScore(10);tone(600+Math.random()*250,.045);if(bricks.every(x=>x.hp<=0))nextLevel();break}}
+}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r)}
+function draw(){ctx.clearRect(0,0,W,H);const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,"#0d1930");bg.addColorStop(1,"#080f20");ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);ctx.save();ctx.strokeStyle="rgba(90,145,210,.055)";for(let x=0;x<W;x+=30){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}for(let y=0;y<H;y+=30){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}ctx.restore();
+for(const b of bricks){if(b.hp<=0)continue;ctx.save();ctx.shadowColor=b.color;ctx.shadowBlur=12;rr(b.x,b.y,b.w,b.h,5);ctx.fillStyle=b.color;ctx.fill();ctx.shadowBlur=0;rr(b.x+2,b.y+2,b.w-4,4,2);ctx.fillStyle="rgba(255,255,255,.23)";ctx.fill();if(b.hp>1){ctx.fillStyle="#fff";ctx.font="bold 10px Inter";ctx.textAlign="center";ctx.fillText("2",b.x+b.w/2,b.y+14)}ctx.restore()}
+ctx.save();ctx.shadowColor="#43e8ff";ctx.shadowBlur=20;const grad=ctx.createLinearGradient(paddle.x,paddle.y,paddle.x+paddle.w,paddle.y);grad.addColorStop(0,"#43e8ff");grad.addColorStop(.5,"#d8fbff");grad.addColorStop(1,"#43a7ff");rr(paddle.x,paddle.y,paddle.w,paddle.h,7);ctx.fillStyle=grad;ctx.fill();ctx.restore();
+ctx.save();ctx.shadowColor="#fff";ctx.shadowBlur=20;const bgd=ctx.createRadialGradient(ball.x-3,ball.y-3,1,ball.x,ball.y,ball.r);bgd.addColorStop(0,"#fff");bgd.addColorStop(.5,"#d8fcff");bgd.addColorStop(1,"#43cfff");ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fillStyle=bgd;ctx.fill();ctx.restore();if(!launched&&running){ctx.fillStyle="rgba(205,230,255,.75)";ctx.font="600 12px Orbitron";ctx.textAlign="center";ctx.fillText("PRESS SPACE OR TAP TO LAUNCH",W/2,H-95)}}
+function loop(now){if(!running)return;const dt=now-last;last=now;update(dt);draw();if(running)raf=requestAnimationFrame(loop)}
+function move(e){const rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width*W;paddle.x=Math.max(14,Math.min(W-paddle.w-14,x-paddle.w/2));if(!launched&&running){ball.x=paddle.x+paddle.w/2;ball.y=paddle.y-ball.r-2}}
+canvas.addEventListener("pointermove",e=>{if(e.pointerType==="touch"||e.buttons>0)move(e)});
+canvas.addEventListener("pointerdown",e=>{move(e);if(!running&&!gameOver&&$("overlayTitle").textContent==="ONE MORE TRY"){hide();running=true;last=performance.now();raf=requestAnimationFrame(loop)}else if(!launched&&running)launch()});
+window.addEventListener("keydown",e=>{if(["ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();if(e.key==="ArrowLeft"||e.key.toLowerCase()==="a")keys.left=true;if(e.key==="ArrowRight"||e.key.toLowerCase()==="d")keys.right=true;if(e.code==="Space"){if(!running&&$("overlayTitle").textContent==="TAKE A BREATHER")resume();else if(running&&launched)pause();else if(running)launch()}if(e.key==="Enter"&&!running)$("mainButton").click()});
+window.addEventListener("keyup",e=>{if(e.key==="ArrowLeft"||e.key.toLowerCase()==="a")keys.left=false;if(e.key==="ArrowRight"||e.key.toLowerCase()==="d")keys.right=false});
+$("mainButton").onclick=buttonAction;$("soundButton").addEventListener("click",()=>{soundOn=!soundOn;$("soundButton").textContent=soundOn?"♫ SOUND ON":"♫ SOUND OFF";$("soundButton").setAttribute("aria-pressed",String(soundOn));if(soundOn)tone(520,.06)});
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&running&&launched)pause()});
+makeBricks();resetBall();hud();draw();
+})();
