@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090d1b">
+<meta name="description" content="BreakGame — a neon brick-breaker arcade game.">
+<title>BREAKGAME — Neon Brick Breaker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="shell">
+<header class="topbar"><a class="brand" href="#"><span class="brand-mark">B</span><span>BREAK<span class="brand-accent">GAME</span></span></a><div class="top-tag"><span class="pulse"></span> ARCADE MODE</div></header>
+<section class="intro"><p class="eyebrow">THE CLASSIC REIMAGINED</p><h1>BREAK THE<br><span>LIMITS.</span></h1><p class="intro-copy">Aim. Bounce. Smash every brick.<br>How high can you score?</p></section>
+<section class="game-card" aria-label="BreakGame arcade">
+<div class="hud">
+<div class="hud-item"><span class="hud-label">SCORE</span><strong id="score">000000</strong></div>
+<div class="hud-item"><span class="hud-label">BEST</span><strong id="best">000000</strong></div>
+<div class="hud-item"><span class="hud-label">LEVEL</span><strong id="level">01</strong></div>
+<div class="hud-item"><span class="hud-label">LIVES</span><strong id="lives" aria-label="3 lives">♥ ♥ ♥</strong></div>
+</div>
+<div class="canvas-wrap"><canvas id="game" width="900" height="560" aria-label="BreakGame play field"></canvas>
+<div class="overlay" id="overlay"><div class="overlay-panel"><div class="overlay-icon" id="overlayIcon">◆</div><p class="eyebrow" id="overlayEyebrow">READY PLAYER ONE</p><h2 id="overlayTitle">LET'S PLAY</h2><p id="overlayText">Break every brick and keep the ball in play.</p><button class="primary-btn" id="mainButton">START GAME <span>→</span></button></div></div>
+</div>
+<div class="game-footer"><span><kbd>←</kbd> <kbd>→</kbd> MOVE PADDLE</span><span><kbd>SPACE</kbd> LAUNCH / PAUSE</span><span class="touch-hint">DRAG TO MOVE · TAP TO LAUNCH</span></div>
+</section>
+<section class="below"><div class="tip"><span class="tip-icon">✦</span><div><strong>PRO TIP</strong><p>Hit the ball with the edges of your paddle to change its angle.</p></div></div><button class="sound-btn" id="soundButton" type="button" aria-pressed="true">♫ SOUND ON</button></section>
+<footer>BUILT FOR THE LOVE OF ARCADE GAMES <span>·</span> BREAKGAME 2026</footer>
+</main>
+<script src="game.js"></script>
+</body></html>
